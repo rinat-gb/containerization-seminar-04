@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Контейнеризация (семинары) Семинар №4</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <h1>Урок 4. Dockerfile и слои</h1>
+  <h2>Ринат Садретдинов</h2>
+  <h2>Группа 3649</h2>
+
+  <div class="black_box">
+    <h3>Задание №1</h3>
+    <p>Сбилдить свой имейдж на основе имейджа <code>mariaDB</code> используя <code>Dockerfile</code>. Добавить
+      какой-нибудь файл в имейдж.
+    </p>
+  </div>
+
+  <ol>
+    <li>Создаём <code>Dockerfile</code> следующего содержания:
+      <br>
+      <pre>
+---
+FROM mariadb:10.10.2
+
+RUN echo "This file has been created during docker container building!" > /myfile.txt
+---
+      </pre>
+      То есть образ будет создаваться на основе образа <code>mariadb</code> с тэгом <code>10.10.2</code>
+      и в корне этого образа создастся файл <code>myfile.txt</code> с текстовой строкой внутри
+      <code>"This file has been created during docker container building!"</code>
+    </li>
+    <li>Запускаем построение данного образа, который назовём <code>mymariadb</code> при помощи команды:
+      <br>
+      <br>
+      <code>docker&nbsp;build&nbsp;-t&nbsp;mymariadb&nbsp;.</code>
+      <br>
+      <br>
+    </li>
+    <li>Запускаем контейнер из только что построенного образа при помощи команды:
+      <br>
+      <br>
+      <code>docker run&nbsp;-e&nbsp;MARIADB_ROOT_PASSWORD=test123&nbsp;-d&nbsp;mymariadb</code>
+      <br>
+      <br>
+      и запоминаем его hash number, достаточно запомнить первые четыре символа hash number (т.к. имя при создании и
+      запуске контейнера мы не указывали, то контейнер доступен теперь только по его hash number):
+      <pre>
+  [rhs@localhost hw]$ docker run -e MARIADB_ROOT_PASSWORD=test123 -d mymariadb
+  <strong>65ca</strong>d9045eb48cf0be0d1232011f385e304bc21116ec02bf1236c820bfb89aba
+  [rhs@localhost hw]$
+</pre>
+    </li>
+    <li>
+      Проверяем запущен ли контейнер при помощи команды <code>`docker&nbsp;ps'</code>
+    </li>
+    <li>
+      Заходим в <code>bash</code> в этом запущенном контейнере при помощи команды, указывая запомненный ранее hash
+      number для идентификации контейнера:
+      <br>
+      <br>
+      <code>docker&nbsp;exec&nbsp;-it&nbsp;65ca&nbsp;bash</code>
+      <br>
+      <br>
+    </li>
+    <li>При помощи команды <code>ls</code> убеждаемся что файл <code>myfile.txt</code> создан и при помощи команды
+      <code>cat</code> выводим на экран его содержимое
+    </li>
+    <li>Останавливаем контейнер, указывая запомненный ранее hash number для идентификации контейнера, при помощи
+      команды:
+      <br>
+      <br>
+      <code>docker&nbsp;stop&nbsp;65ca&nbsp;</code>
+      <br>
+      <br>
+      и удаляем контейнер, указывая запомненный ранее hash number для идентификации контейнера, при помощи команды:
+      <br>
+      <br>
+      <code>docker&nbsp;rm&nbsp;65ca&nbsp;</code>
+      <br>
+      <br>
+      т.к. он нам больше не понадобится, для следующего задания всё равно надо делать другой.
+    </li>
+  </ol>
+
+  <img src="img/containerization_seminar_04_task_01.png" alt="скриншот задания №1">
+
+  <div class="black_box">
+    <h3>Задание №2</h3>
+    <p>Сделать свой конфиг для <code>mariaDB</code> и заменить конфиг базового имейджа используя
+      <code>Dockerfile</code>. Допустим поменять порт, максимальное использование памяти и т.д
+    </p>
+  </div>
+
+  <ol>
+    <li>
+      <p>Конфиг для <code>mariadb</code> в базовом образе находится в файле
+        <code>/etc/mysql/mariadb.conf.d/50-server.cnf</code>. При помощи строчного редактора <code>sed</code>
+        поменяем в этом конфиге значение переменной <code>expire_logs_days</code>, отвечающую за хранение
+        логов определённое число дней, установим её в 7 чтобы логи хранились ровно неделю. Оригинальный
+        файл сохраним с расширением <code>.orig</code>
+      </p>
+
+      <p>Для этого создадим следующий <code>Dockerfile</code>, содержащий вызов строчного редактора <code>sed</code>:
+      </p>
+      <pre>
+---
+FROM mariadb:10.10.2
+
+RUN sed -E -i.orig 's/(expire_logs_days\s*=\s*)[0-9]+/\17/' /etc/mysql/mariadb.conf.d/50-server.cnf
+---
+</pre>
+    </li>
+    <li>Запускаем построение данного образа, который назовём так же как в первом задании <code>mymariadb</code> при
+      помощи команды:
+      <br>
+      <br>
+      <code>docker&nbsp;build&nbsp;-t&nbsp;mymariadb&nbsp;.</code>
+      <br>
+      <br>
+    </li>
+    <li>Запускаем контейнер из только что построенного образа при помощи команды (в отличии от первого задания в этот
+      раз задаём имя при помощи опции <code>--name</code>) в командной строке:
+      <br>
+      <br>
+      <code>docker run&nbsp;--name&nbsp;mymariadb&nbsp;-e&nbsp;MARIADB_ROOT_PASSWORD=test123&nbsp;-d&nbsp;mymariadb</code>
+      <br>
+      <br>
+    </li>
+    <li>
+      Проверяем запущен ли контейнер при помощи команды <code>`docker&nbsp;ps'</code>
+    </li>
+    <li>
+      Заходим в <code>bash</code> в этом запущенном контейнере:
+      <br>
+      <br>
+      <code>docker&nbsp;exec&nbsp;-it&nbsp;mymariadb&nbsp;bash</code>
+      <br>
+      <br>
+    </li>
+    <li>
+      При помощи команды <code>grep</code> смотрим значение переменной <code>expire_logs_days</code> в оригинальном
+      конфигурационном файле, который был сохранён с расширением <code>.orig</code> и в текущем конфигурационном файле.
+      Убеждаемся что они разные, было 10, а стало 7 как мы и указали в <code>Dockerfile</code>.
+    </li>
+    <li>Останавливаем контейнер:
+      <br>
+      <br>
+      <code>docker&nbsp;stop&nbsp;mymariadb&nbsp;</code>
+      <br>
+      <br>
+      и удаляем контейнер:
+      <br>
+      <br>
+      <code>docker&nbsp;rm&nbsp;mymariadb&nbsp;</code>
+      <br>
+      <br>
+      т.к. он нам больше не понадобится, для следующего задания опять придётся создавать другой контейнер.
+    </li>
+  </ol>
+
+  <img src="img/containerization_seminar_04_task_02.png" alt="скриншот задания №2">
+
+  <div class="black_box">
+    <h3>Задание №3</h3>
+    <p>Слинковать папку с базой данных с контейнера с mariaDB в папку на хосте (как на семинаре). Заполнить БД данными
+      или добавить запись и проверить, что файлы базы данных появились на хостовой машине.
+    </p>
+  </div>
+  <p>Тут в принципе всё то же самое как было на предыдущем семинаре, поэтому не буду ничего пошагово расписывать, просто
+    сразу же продемонстрирую скриншот.</p>
+  <p>Используется тот контейнер, который мы только что создали в задании №2 с изменённой переменной
+    <code>expire_logs_days</code> в оригинальном конфигурационном файле
+  </p>
+
+  <img src="img/containerization_seminar_04_task_03.png" alt="скриншот задания №3">
+
+  <div class="black_box">
+    <h3>Задание №4</h3>
+    <p>Запустить <code>phpmyadmin</code> (в контейнере) и через веб проверить, что все введенные данные доступны.
+    </p>
+  </div>
+
+  <p>И тут тоже всё то же самое как было на предыдущем семинаре, поэтому тут тоже не буду ничего пошагово расписывать,
+    просто сразу же продемонстрирую скриншоты.</p>
+
+  <img src="img/containerization_seminar_04_task_04_1.png" alt="первый скриншот задания №4">
+
+  <p>Как видим <code>myphpadmin</code> запускается:</p>
+
+  <img src="img/containerization_seminar_04_task_04_2.png" alt="второй скриншот задания №4">
+
+  <p>И созданную базу с именем <code>MYDATABASE</code> прекрасно видит:</p>
+
+  <img src="img/containerization_seminar_04_task_04_3.png" alt="третий скриншот задания №4">
+
+</body>
+
+</html>
